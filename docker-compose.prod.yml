@@ -1,0 +1,56 @@
+
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: infosys_events
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  ai_service:
+    build: ./ai_service
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@db:5432/infosys_events?schema=public
+      - AI_SERVICE_URL=http://ai_service:8000
+      - JWT_SECRET=infosys_secret_key_12345
+    depends_on:
+      - db
+      - ai_service
+
+  admin-frontend:
+    build: ./admin-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  student-frontend:
+    build: ./student-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+  sponsor-frontend:
+    build: ./sponsor-frontend
+    ports:
+      - "8082:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

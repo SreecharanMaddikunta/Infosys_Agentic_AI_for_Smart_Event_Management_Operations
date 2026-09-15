@@ -1,0 +1,17 @@
+{
+  "name": "infosys-project1-root",
+  "version": "1.0.0",
+  "description": "Root project launcher",
+  "scripts": {
+    "dev": "npx concurrently \"npm run dev:student\" \"npm run dev:admin\" \"npm run dev:backend\" \"npm run dev:ai\" \"npm run dev:sponsor\"",
+    "dev:student": "cd student-frontend && npm run dev",
+    "dev:admin": "cd admin-frontend && npm run dev",
+    "dev:sponsor": "cd sponsor-frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:ai": "cd ai_service && .\\venv\\Scripts\\activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:all": "npx concurrently \"npm run dev:student\" \"npm run dev:admin\" \"npm run dev:sponsor\" \"npm run dev:backend\" \"npm run dev:ai\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

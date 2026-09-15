@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                Int            @id @default(autoincrement())
+  name              String
+  email             String         @unique
+  password          String
+  role              String         @default("STUDENT") // STUDENT, ADMIN, SUPERADMIN, SPONSOR
+  category          String         @default("Student") // Student, Working Professional, VIP, Sponsor
+  gender            String         @default("Prefer not to say")
+  phone             String?
+  college           String?
+  
+  // Sponsor Specific Fields
+  companyName       String?
+  industry          String?
+  
+  registrations     Registration[]
+  attendances       Attendance[]
+  reportedIncidents Incident[]
+  sponsorships      Sponsor[]      // A user (sponsor) can sponsor multiple events
+  
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model Event {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String?
+  date          DateTime
+  venue         String
+  slots         Int
+  registrations Registration[]
+  attendances   Attendance[]
+  sessions      Session[]
+  sponsors      Sponsor[]
+  incidents     Incident[]
+  insights      EventInsight[]
+  recommendations ActionableRecommendation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Registration {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  eventId        Int
+  registrationId String   @unique
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  mailStatus     String   @default("PENDING") // PENDING, SENT, FAILED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  student User  @relation(fields: [studentId], references: [id])
+  event   Event @relation(fields: [eventId], references: [id])
+
+  @@unique([studentId, eventId])
+}
+model Attendance {
+  id              Int       @id @default(autoincrement())
+  studentId       Int
+  eventId         Int
+  checkInTime     DateTime  @default(now())
+  checkOutTime    DateTime?
+  durationMinutes Int?
+  status          String    @default("PRESENT") // PRESENT, LATE
+
+  student User  @relation(fields: [studentId], references: [id])
+  event   Event @relation(fields: [eventId], references: [id])
+
+  @@unique([studentId, eventId])
+}
+
+model Venue {
+  id          Int       @id @default(autoincrement())
+  name        String
+  capacity    Int
+  location    String
+  facilities  String    // Stored as JSON string
+  status      String    @default("AVAILABLE") // AVAILABLE, MAINTENANCE
+  sessions    Session[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Speaker {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  bio          String?
+  expertise    String    // Stored as JSON string
+  availability String?   // Stored as JSON string representing time slots
+  pastRating   Float?    @default(0.0)
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  speakerId   Int?
+  venueId     Int?
+  
+  event       Event    @relation(fields: [eventId], references: [id])
+  speaker     Speaker? @relation(fields: [speakerId], references: [id])
+  venue       Venue?   @relation(fields: [venueId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Sponsor {
+  id                        Int      @id @default(autoincrement())
+  
+  // Link to the registered User who owns this sponsorship
+  userId                    Int?
+  user                      User?    @relation(fields: [userId], references: [id])
+  
+  name                      String
+  tier                      String   // Platinum, Gold, Silver
+  
+  // Deliverables Tracking (based on slides)
+  paymentStatus             String   @default("Pending") // Pending, Paid
+  brandingCompleted         Boolean  @default(false)
+  boothAllocated            Boolean  @default(false)
+  passesAllocated           Int      @default(0)
+  promoSessionsCompleted    Int      @default(0)
+  
+  // Analytics
+  engagementScore           Float    @default(0) // Percentage
+  boothVisits               Int      @default(0)
+  leadsGenerated            Int      @default(0)
+  attendeeInteractions      Int      @default(0)
+  sessionParticipation      Int      @default(0)
+  socialMediaEngagement     Float    @default(0)
+  deliverablesCompleted     Float    @default(0) // Percentage
+  roiIndicator              Float    @default(0)
+  sponsorSatisfaction       Float    @default(0)
+  conversionRate            Float    @default(0) // Percentage
+  performanceStatus         String   @default("Good") // Excellent, Good, At Risk
+  
+  eventId                   Int?
+  event                     Event?   @relation(fields: [eventId], references: [id])
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model Incident {
+  id                Int      @id @default(autoincrement())
+  description       String
+  category          String   // e.g., Technical, Medical, Security
+  severity          String   // Low, Medium, High, Critical
+  priority          String   // Low, Medium, High
+  affectedArea      String?
+  responsibleTeam   String?
+  recommendedAction String?
+  photoBase64       String?
+  incidentType      String?
+  incidentTime      DateTime?
+  eventId           Int?
+  event             Event?   @relation(fields: [eventId], references: [id])
+  status            String   @default("Logged") // Detected, Logged, Notified, Investigating, Resolved, Verifying, Closed
+  resolutionNotes   String?
+  reporterId        Int?
+  reporter          User?    @relation(fields: [reporterId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Alert {
+  id        Int      @id @default(autoincrement())
+  type      String   // "CRITICAL", "HIGH", "MEDIUM", "INFO"
+  message   String
+  source    String   // "AI", "SYSTEM"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EventInsight {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  event       Event    @relation(fields: [eventId], references: [id])
+  type        String   // "CAPACITY", "REGISTRATION", "QUEUE", "SCHEDULE", "GENERAL"
+  description String
+  severity    String   // "INFO", "WARNING", "CRITICAL"
+  createdAt   DateTime @default(now())
+  recommendations ActionableRecommendation[]
+}
+
+model ActionableRecommendation {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  event       Event    @relation(fields: [eventId], references: [id])
+  insightId   Int?
+  insight     EventInsight? @relation(fields: [insightId], references: [id])
+  message     String
+  status      String   @default("PENDING") // "PENDING", "DISMISSED", "IMPLEMENTED"
+  sourceAgent String   // "VenueAgent", "SchedulingAgent", "Orchestrator"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
